@@ -1,93 +1,80 @@
-const { createClient } = require("@supabase/supabase-js");
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
-const pool = require("../config/db"); // Atau client PostgreSQL kamu
+const supabase = require("../config/supabase");
 
-exports.uploadMateri = async (req, res) => {
+exports.uploadMateriFile = async (req, res) => {
   try {
-    const { id_guru, id_matpel, id_kelas, nama, deskripsi, isi, catatan } = req.body;
+    const file = req.file;
+    const materiId = req.body.materiId;
 
-    if (!req.file) {
-      return res.status(400).json({ error: "File wajib diupload" });
+    if (!file) {
+      return res.status(400).json({ error: "File tidak ditemukan" });
     }
 
-    const file = req.file;
-    const filePath = `materi/${Date.now()}_${file.originalname}`;
+    const filePath = `materi/${materiId}/${Date.now()}-${file.originalname}`;
 
-    // 1. Upload file ke Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const { error } = await supabase.storage
       .from("materi")
       .upload(filePath, file.buffer, {
         contentType: file.mimetype,
-        upsert: true,
+        upsert: false,
       });
 
-    if (uploadError) throw uploadError;
+    if (error) return res.status(500).json({ error: error.message });
 
-    // 2. Generate public URL
-    const { data: publicUrl } = supabase.storage
+    const publicUrl = supabase.storage
       .from("materi")
-      .getPublicUrl(filePath);
-
-    const url_media = publicUrl.publicUrl;
-
-    // 3. Simpan metadata ke DB
-    const query = `
-      INSERT INTO materi 
-      (id_guru, id_matpel, id_kelas, nama, deskripsi, isi, catatan, url_media)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING *
-    `;
-
-    const values = [
-      id_guru,
-      id_matpel,
-      id_kelas,
-      nama,
-      deskripsi || null,
-      isi || null,
-      catatan || null,
-      url_media
-    ];
-
-    const { rows } = await pool.query(query, values);
+      .getPublicUrl(filePath).data.publicUrl;
 
     res.json({
-      message: "Materi berhasil ditambahkan",
-      materi: rows[0],
+      message: "Upload berhasil",
+      file: {
+        url: publicUrl,
+        path: filePath,
+        name: file.originalname,
+      },
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Gagal menambahkan materi" });
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.listMateri = async (req, res) => {
-  const { id_matpel, id_kelas } = req.params;
+exports.listMateriFiles = async (req, res) => {
+  try {
+    const materiId = req.params.id;
 
-  const query = `
-    SELECT * FROM materi
-    WHERE id_matpel = $1 AND id_kelas = $2
-    ORDER BY tanggal_pembuatan DESC
-  `;
+    const { data, error } = await supabase.storage
+      .from("materi")
+      .list(`materi/${materiId}`);
 
-  const { rows } = await pool.query(query, [id_matpel, id_kelas]);
+    if (error) return res.status(500).json({ error: error.message });
 
-  res.json(rows);
+    const files = data.map((f) => ({
+      name: f.name,
+      url: supabase.storage.from("materi").getPublicUrl(`materi/${materiId}/${f.name}`).data.publicUrl,
+      size: f.metadata?.size,
+      created_at: f.created_at,
+    }));
+
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-exports.deleteMateri = async (req, res) => {
-  const { id } = req.params;
+exports.deleteMateriFile = async (req, res) => {
+  try {
+    const materiId = req.params.id;
+    const fileId = req.params.fileId;
 
-  const { rows } = await db.query("SELECT url_media FROM materi WHERE id = $1", [id]);
-  if (!rows.length) return res.status(404).json({ error: "Materi tidak ditemukan" });
+    const filePath = `materi/${materiId}/${fileId}`;
 
-  const url = rows[0].url_media;
+    const { error } = await supabase.storage
+      .from("materi")
+      .remove([filePath]);
 
-  const filePath = url.split("/storage/v1/object/public/materi/")[1];
+    if (error) return res.status(500).json({ error: error.message });
 
-  await supabase.storage.from("materi").remove([filePath]);
-
-  await pool.query("DELETE FROM materi WHERE id = $1", [id]);
-
-  res.json({ message: "Materi dihapus" });
+    res.json({ message: "File berhasil dihapus" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
