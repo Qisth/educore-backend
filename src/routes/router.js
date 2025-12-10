@@ -93,7 +93,7 @@ const path = require("path");
 const tmpDir = path.join(__dirname, "..", "..", "uploads", "_tmp");
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-const upload = multer({ dest: tmpDir });
+const upload = multer(); // no dest → keeps file in memory as buffer
 
 // List folders (public)
 router.get("/uploads/folders", controller.listFolders);
@@ -101,8 +101,7 @@ router.get("/uploads/folders", controller.listFolders);
 // List files in a folder (public)
 router.get("/uploads/files/:folder", controller.listFiles);
 
-// Upload (form: folderName, file) - keep public for now (requires teacher auth later)
-router.post("/uploads/upload", upload.single("file"), controller.uploadFile);
+router.post("/uploads/upload", upload.single("file"), controller.uploadFileSupabase);
 
 // Download specific file in folder (public)
 router.get("/uploads/download/:folder/:file", controller.downloadFolderFile);

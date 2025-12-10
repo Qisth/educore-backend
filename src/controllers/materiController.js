@@ -1,89 +1,93 @@
-const fs = require("fs-extra");
-const path = require("path");
+const { createClient } = require("@supabase/supabase-js");
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
+const pool = require("../config/db"); // Atau client PostgreSQL kamu
 
-const DATA_PATH = "./data/materi.json";
+exports.uploadMateri = async (req, res) => {
+  try {
+    const { id_guru, id_matpel, id_kelas, nama, deskripsi, isi, catatan } = req.body;
 
-// Helper untuk ambil data
-const getData = () => JSON.parse(fs.readFileSync(DATA_PATH));
-const saveData = (data) =>
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
-
-// ➕ Upload
-exports.uploadMateri = (req, res) => {
-  const { mapel, kelas, folderName } = req.body;
-  const files = req.files.map((f) => ({
-    name: f.originalname,
-    path: f.path,
-  }));
-
-  let data = getData();
-  const materi = {
-    id: Date.now(),
-    folderName,
-    mapel,
-    kelas,
-    uploadDate: Date.now(),
-    files,
-  };
-
-  data.push(materi);
-  saveData(data);
-
-  res.json({ message: "Materi berhasil diupload", materi });
-};
-
-// 📄 List
-exports.listMateri = (req, res) => {
-  const { mapel, kelas } = req.params;
-  const data = getData().filter((m) => m.mapel === mapel && m.kelas === kelas);
-  res.json(data);
-};
-
-// ⬇ Download
-exports.downloadFile = (req, res) => {
-  const { materiId, fileIndex } = req.params;
-  const data = getData();
-  const materi = data.find((m) => m.id == materiId);
-  if (!materi) return res.status(404).send("Materi tidak ditemukan");
-
-  const file = materi.files[fileIndex];
-  if (!file) return res.status(404).send("File tidak ditemukan");
-
-  res.download(file.path, file.name);
-};
-
-// 🗑 Hapus file
-exports.deleteFile = (req, res) => {
-  const { materiId, fileIndex, mapel, kelas } = req.params;
-  let data = getData();
-
-  data = data.map((m) => {
-    if (m.id == materiId && m.mapel == mapel && m.kelas == kelas) {
-      const file = m.files[fileIndex];
-      if (file) fs.removeSync(file.path);
-      m.files.splice(fileIndex, 1);
+    if (!req.file) {
+      return res.status(400).json({ error: "File wajib diupload" });
     }
-    return m;
-  });
 
-  saveData(data);
-  res.json({ message: "File dihapus" });
+    const file = req.file;
+    const filePath = `materi/${Date.now()}_${file.originalname}`;
+
+    // 1. Upload file ke Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from("materi")
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    // 2. Generate public URL
+    const { data: publicUrl } = supabase.storage
+      .from("materi")
+      .getPublicUrl(filePath);
+
+    const url_media = publicUrl.publicUrl;
+
+    // 3. Simpan metadata ke DB
+    const query = `
+      INSERT INTO materi 
+      (id_guru, id_matpel, id_kelas, nama, deskripsi, isi, catatan, url_media)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING *
+    `;
+
+    const values = [
+      id_guru,
+      id_matpel,
+      id_kelas,
+      nama,
+      deskripsi || null,
+      isi || null,
+      catatan || null,
+      url_media
+    ];
+
+    const { rows } = await pool.query(query, values);
+
+    res.json({
+      message: "Materi berhasil ditambahkan",
+      materi: rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Gagal menambahkan materi" });
+  }
 };
 
-// 🚮 Hapus folder
-exports.deleteFolder = (req, res) => {
-  const { materiId, mapel, kelas } = req.params;
-  let data = getData();
+exports.listMateri = async (req, res) => {
+  const { id_matpel, id_kelas } = req.params;
 
-  const materi = data.find(
-    (m) => m.id == materiId && m.mapel == mapel && m.kelas == kelas
-  );
-  if (!materi) return res.status(404).send("Folder tidak ditemukan");
+  const query = `
+    SELECT * FROM materi
+    WHERE id_matpel = $1 AND id_kelas = $2
+    ORDER BY tanggal_pembuatan DESC
+  `;
 
-  materi.files.forEach((f) => fs.removeSync(f.path));
-  data = data.filter((m) => m.id != materiId);
+  const { rows } = await pool.query(query, [id_matpel, id_kelas]);
 
-  saveData(data);
+  res.json(rows);
+};
 
-  res.json({ message: "Folder dihapus" });
+exports.deleteMateri = async (req, res) => {
+  const { id } = req.params;
+
+  const { rows } = await db.query("SELECT url_media FROM materi WHERE id = $1", [id]);
+  if (!rows.length) return res.status(404).json({ error: "Materi tidak ditemukan" });
+
+  const url = rows[0].url_media;
+
+  const filePath = url.split("/storage/v1/object/public/materi/")[1];
+
+  await supabase.storage.from("materi").remove([filePath]);
+
+  await pool.query("DELETE FROM materi WHERE id = $1", [id]);
+
+  res.json({ message: "Materi dihapus" });
 };
