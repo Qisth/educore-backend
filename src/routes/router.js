@@ -90,7 +90,7 @@ router.post(
   "/materi/upload",
   checkLogin,
   upload.single("file"),
-  materiController.uploadMateriFile
+  materiController.uploadMateriFiles
 );
 
 // List files pada materi tertentu
