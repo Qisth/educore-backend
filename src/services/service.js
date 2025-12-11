@@ -404,7 +404,7 @@ async function updateProfil(idAkun, role, data) {
             kota_sekolah = $9,
             nama_sekolah = $10,
             kelas = $11,
-            telp = $12,
+            telepon = $12,
             gender = $13,
             updated_at = NOW()
         WHERE id_akun = $14
@@ -451,7 +451,7 @@ async function updateProfil(idAkun, role, data) {
             provinsi_sekolah = $5,
             kota_sekolah = $6,
             nama_sekolah = $7,
-            telp = $8,
+            telepon = $8,
             gender = $9,
             updated_at = NOW()
         WHERE id_akun = $10
