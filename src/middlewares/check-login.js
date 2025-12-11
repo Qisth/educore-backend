@@ -3,7 +3,10 @@ const { error } = require("../utils/response");
 
 async function checkLogin(req, res, next) {
   try {
-    const token = req.headers.authorization?.trim();
+    const authHeader = req.headers.authorization?.trim();
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : authHeader;
     console.log("checkLogin token:", token);
     if (!token) return error(res, 401, "Tidak ada token");
 
