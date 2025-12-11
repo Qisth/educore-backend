@@ -381,6 +381,9 @@ async function updateProfil(idAkun, role, data) {
     kotaSekolah,
     namaSekolah,
     fotoProfil,
+    kelas,
+    telp,
+    gender,
   } = data;
 
   const client = await pool.connect();
@@ -400,8 +403,11 @@ async function updateProfil(idAkun, role, data) {
             provinsi_sekolah = $8,
             kota_sekolah = $9,
             nama_sekolah = $10,
+            kelas = $11,
+            telp = $12,
+            gender = $13,
             updated_at = NOW()
-        WHERE id_akun = $11
+        WHERE id_akun = $14
         RETURNING *
       `;
       const res = await client.query(q, [
@@ -415,6 +421,9 @@ async function updateProfil(idAkun, role, data) {
         provinsiSekolah || null,
         kotaSekolah || null,
         namaSekolah || null,
+        kelas || null,
+        telp || null,
+        gender || null,
         idAkun,
       ]);
 
@@ -439,8 +448,13 @@ async function updateProfil(idAkun, role, data) {
             provinsi_alamat = $2,
             kota_alamat = $3,
             alamat = $4,
+            provinsi_sekolah = $5,
+            kota_sekolah = $6,
+            nama_sekolah = $7,
+            telp = $8,
+            gender = $9
             updated_at = NOW()
-        WHERE id_akun = $5
+        WHERE id_akun = $10
         RETURNING *
       `;
       const res = await client.query(q, [
@@ -448,6 +462,11 @@ async function updateProfil(idAkun, role, data) {
         provinsiAlamat || null,
         kotaAlamat || null,
         alamat || null,
+        provinsiSekolah || null,
+        kotaSekolah || null,
+        namaSekolah || null,
+        telp || null,
+        gender || null,
         idAkun,
       ]);
 
