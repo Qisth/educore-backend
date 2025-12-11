@@ -2,26 +2,26 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../utils/multerConfig");
 const {
-  uploadMateri,
-  listMateri,
-  downloadFile,
-  deleteFile,
-  deleteFolder,
+  uploadMateriFiles,
+  listMateriFiles,
+  getMateriFileUrl,
+  deleteMateriFile,
+  deleteMateriFolder,
 } = require("../controllers/materiController");
 
-// UPLOAD FILE
-router.post("/upload", upload.array("files"), uploadMateri);
+// UPLOAD FILE (banyak)
+router.post("/upload", upload.array("files"), uploadMateriFiles);
 
 // LIST FILE
-router.get("/:mapel/:kelas", listMateri);
+router.get("/:materiId", listMateriFiles);
 
-// DOWNLOAD FILE
-router.get("/download/:materiId/:fileIndex", downloadFile);
+// GET DOWNLOAD URL
+router.get("/download/:materiId/:fileName", getMateriFileUrl);
 
 // DELETE SINGLE FILE
-router.delete("/file/:materiId/:fileIndex/:mapel/:kelas", deleteFile);
+router.delete("/file/:materiId/:fileName", deleteMateriFile);
 
 // DELETE FOLDER
-router.delete("/folder/:materiId/:mapel/:kelas", deleteFolder);
+router.delete("/folder/:materiId", deleteMateriFolder);
 
 module.exports = router;
