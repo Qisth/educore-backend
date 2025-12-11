@@ -62,9 +62,9 @@ async function handleLogin(data, role) {
   }
 
   try {
+    // Ambil user
     const q = `SELECT id, email, password, role FROM akun WHERE email = $1 AND role = $2 LIMIT 1`;
     const res = await client.query(q, [email, role]);
-    logger.debug("Login query result", { rowCount: res.rows.length });
     if (res.rows.length === 0) return null;
 
     const user = res.rows[0];
@@ -72,15 +72,28 @@ async function handleLogin(data, role) {
     if (!match) return null;
 
     const token = crypto.randomBytes(32).toString("hex");
-    logger.info("Login successful", {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-    await client.query(
-      `INSERT INTO sesi (token, id_akun, waktu_berakhir) VALUES ($1, $2, DEFAULT)`,
-      [token, user.id]
+
+    // Cek apakah sudah ada sesi aktif
+    const sesiCheck = await client.query(
+      `SELECT 1 FROM sesi WHERE id_akun = $1 AND waktu_berakhir > NOW() LIMIT 1`,
+      [user.id]
     );
+
+    if (sesiCheck.rows.length > 0) {
+      // Perpanjang sesi lama + update token
+      await client.query(
+        `UPDATE sesi SET token = $1, waktu_berakhir = DEFAULT WHERE id = $2`,
+        [token, sesiCheck.rows[0].id]
+      );
+      logger.info("Sesi lama diperpanjang", { userId: user.id });
+    } else {
+      // Buat sesi baru
+      await client.query(
+        `INSERT INTO sesi (token, id_akun) VALUES ($1, $2)`,
+        [token, user.id]
+      );
+      logger.info("Sesi baru dibuat", { userId: user.id });
+    }
 
     return { token, user: { id: user.id, email: user.email, role: user.role } };
   } catch (err) {
