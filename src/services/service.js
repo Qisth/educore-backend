@@ -452,7 +452,7 @@ async function updateProfil(idAkun, role, data) {
             kota_sekolah = $6,
             nama_sekolah = $7,
             telp = $8,
-            gender = $9
+            gender = $9,
             updated_at = NOW()
         WHERE id_akun = $10
         RETURNING *
