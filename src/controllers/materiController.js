@@ -1,7 +1,7 @@
 const supabase = require("../config/supabase");
 
 // UPLOAD BANYAK FILE
-const uploadMateriFiles = async (req, res) => {
+exports.uploadMateriFiles = async (req, res) => {
   try {
     const materiId = req.body.materiId;
     const files = req.files;
@@ -34,7 +34,7 @@ const uploadMateriFiles = async (req, res) => {
 };
 
 // LIST FILE
-const listMateriFiles = async (req, res) => {
+exports.listMateriFiles = async (req, res) => {
   try {
     const materiId = req.params.materiId;
 
@@ -55,7 +55,7 @@ const listMateriFiles = async (req, res) => {
 };
 
 // GET PUBLIC URL / DOWNLOAD
-const getMateriFileUrl = async (req, res) => {
+exports.getMateriFileUrl = async (req, res) => {
   try {
     const { materiId, fileName } = req.params;
     const { data, error } = supabase.storage
@@ -71,7 +71,7 @@ const getMateriFileUrl = async (req, res) => {
 };
 
 // DELETE SINGLE FILE
-const deleteMateriFile = async (req, res) => {
+exports.deleteMateriFile = async (req, res) => {
   try {
     const { materiId, fileName } = req.params;
     const filePath = `materi/${materiId}/${fileName}`;
@@ -86,7 +86,7 @@ const deleteMateriFile = async (req, res) => {
 };
 
 // DELETE FOLDER
-const deleteMateriFolder = async (req, res) => {
+exports.deleteMateriFolder = async (req, res) => {
   try {
     const materiId = req.params.materiId;
     const { data, error } = await supabase.storage.from("materi").list(`materi/${materiId}`);
@@ -102,12 +102,4 @@ const deleteMateriFolder = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
-
-module.exports = {
-  uploadMateriFiles,
-  listMateriFiles,
-  getMateriFileUrl,
-  deleteMateriFile,
-  deleteMateriFolder,
 };
