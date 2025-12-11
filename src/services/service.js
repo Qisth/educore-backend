@@ -82,8 +82,8 @@ async function handleLogin(data, role) {
     if (sesiCheck.rows.length > 0) {
       // Perpanjang sesi lama + update token
       await client.query(
-        `UPDATE sesi SET token = $1, waktu_berakhir = DEFAULT WHERE id = $2`,
-        [token, sesiCheck.rows[0].id]
+        `UPDATE sesi SET token = $1, waktu_berakhir = DEFAULT WHERE id_akun = $2`,
+        [token, sesiCheck.rows[0].id_akun]
       );
       logger.info("Sesi lama diperpanjang", { userId: user.id });
     } else {
