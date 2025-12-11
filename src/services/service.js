@@ -75,7 +75,7 @@ async function handleLogin(data, role) {
 
     // Cek apakah sudah ada sesi aktif
     const sesiCheck = await client.query(
-      `SELECT 1 FROM sesi WHERE id_akun = $1 AND waktu_berakhir > NOW() LIMIT 1`,
+      `SELECT * FROM sesi WHERE id_akun = $1 AND waktu_berakhir > NOW() LIMIT 1`,
       [user.id]
     );
 
