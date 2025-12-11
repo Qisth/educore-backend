@@ -4,6 +4,7 @@ const { error } = require("../utils/response");
 async function checkLogin(req, res, next) {
   try {
     const token = req.headers.authorization?.trim();
+    console.log("checkLogin token:", token);
     if (!token) return error(res, 401, "Tidak ada token");
 
     const query = `
